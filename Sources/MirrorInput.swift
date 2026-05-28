@@ -18,6 +18,12 @@ final class MirrorInput {
     private let cursorWindow = CursorWindow()
     private var lastOnWorkspace = false
 
+    /// Mirror the proxy cursor image to match the flipped content (off = normal-facing arrow).
+    func setCursorFlipped(_ on: Bool) {
+        cursorWindow.setFlipped(on)
+        Log.line("MirrorInput(proxy): cursor flipped = \(on)")
+    }
+
     func setMappings(_ maps: [WorkspaceMapping]) {
         mappings = maps
         Log.line("MirrorInput(proxy): \(maps.count) workspace(s)")

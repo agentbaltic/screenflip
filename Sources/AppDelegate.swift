@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controllers: [String: Any] = [:]      // uuid -> FlipController
     private var selected: Set<String> = []            // uuids the user wants flipped
     private let defaultsKey = "flippedDisplayUUIDs"
+    private let cursorFlipKey = "flipCursor"
     private var savedArrangement: [CGDirectDisplayID: CGPoint] = [:]
 
     func applicationDidFinishLaunching(_ note: Notification) {
@@ -32,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                name: NSApplication.didChangeScreenParametersNotification, object: nil)
 
         reconcile()
+        MirrorInput.shared.setCursorFlipped(UserDefaults.standard.bool(forKey: cursorFlipKey))
         rebuildMenu()
     }
 
@@ -126,6 +128,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         note.isEnabled = false
         menu.addItem(note)
 
+        let flipCursorItem = NSMenuItem(title: "Flip cursor to match mirror",
+                                        action: #selector(toggleCursorFlip), keyEquivalent: "")
+        flipCursorItem.state = UserDefaults.standard.bool(forKey: cursorFlipKey) ? .on : .off
+        flipCursorItem.target = self
+        menu.addItem(flipCursorItem)
+
+        menu.addItem(.separator())
         if !CGPreflightScreenCaptureAccess() {
             let warn = NSMenuItem(title: "⚠︎ Grant Screen Recording…", action: #selector(openScreenRecordingPrefs), keyEquivalent: "")
             warn.target = self
@@ -138,6 +147,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quit.target = self
         menu.addItem(quit)
         statusItem.menu = menu
+    }
+
+    @objc private func toggleCursorFlip() {
+        let on = !UserDefaults.standard.bool(forKey: cursorFlipKey)
+        UserDefaults.standard.set(on, forKey: cursorFlipKey)
+        MirrorInput.shared.setCursorFlipped(on)
+        rebuildMenu()
     }
 
     @objc private func openScreenRecordingPrefs() {
