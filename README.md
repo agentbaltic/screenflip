@@ -30,6 +30,14 @@ There is **no input interception** of any kind — nothing touches your mouse or
 
 > Note: ScreenFlip uses a private macOS virtual‑display API. It works well today but, like anything built on private APIs, could need updates after a major macOS release.
 
+## Download
+
+Download the latest bundled app here:
+
+**[Download ScreenFlip.app](https://github.com/vbario/screenflip/raw/main/build/ScreenFlip.zip)**
+
+Unzip it, open `ScreenFlip.app`, and grant Screen Recording permission when macOS asks.
+
 ## Build & run
 
 ```bash
