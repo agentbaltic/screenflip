@@ -10,9 +10,9 @@ enum Log {
     }()
 
     static func line(_ msg: String) {
-        let stamped = "[\(fmt.string(from: Date()))] \(msg)\n"
         NSLog("screenflip: %@", msg)
         q.async {
+            let stamped = "[\(fmt.string(from: Date()))] \(msg)\n"
             if let data = stamped.data(using: .utf8) {
                 if let fh = FileHandle(forWritingAtPath: path) {
                     fh.seekToEndOfFile(); fh.write(data); fh.closeFile()
@@ -23,5 +23,9 @@ enum Log {
         }
     }
 
-    static func reset() { try? "".write(toFile: path, atomically: true, encoding: .utf8) }
+    static func reset() {
+        q.sync {
+            try? "".write(toFile: path, atomically: true, encoding: .utf8)
+        }
+    }
 }

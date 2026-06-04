@@ -139,7 +139,9 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
         if frameCount == 1 || frameCount % 120 == 0 {
             Log.line("frame \(frameCount) \(CVPixelBufferGetWidth(pb))x\(CVPixelBufferGetHeight(pb))")
         }
+        let retainedSurface = Unmanaged.passRetained(surface)
         DispatchQueue.main.async { [weak self] in
+            let surface = retainedSurface.takeRetainedValue()
             guard let self, self.isCurrentStream(stream) else { return }
             self.onSurface?(surface)
         }
