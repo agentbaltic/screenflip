@@ -46,12 +46,11 @@ swiftc \
 cp Info.plist "$APP_DIR/Contents/Info.plist"
 if compgen -G "Resources/*" >/dev/null; then cp -R Resources/* "$APP_DIR/Contents/Resources/" 2>/dev/null || true; fi
 
-# Signing. Default: ad-hoc (-) — fast, never blocks on a keychain prompt, but TCC
-# grants reset each rebuild. Set SF_USE_CERT=1 to sign with the stable self-signed
-# "ScreenFlip Dev" identity (TCC grants persist) — requires the codesign key to be
-# authorized once (run scripts/authorize-signing.sh, or click "Always Allow").
+# Signing. Prefer the stable self-signed "ScreenFlip Dev" identity when present so
+# macOS Screen Recording grants survive rebuilds. Set SF_USE_CERT=0 to force ad-hoc
+# signing for one-off builds.
 SIGN_ID="-"
-if [[ "${SF_USE_CERT:-0}" == "1" ]] && security find-identity -v -p codesigning 2>/dev/null | grep -q "ScreenFlip Dev"; then
+if [[ "${SF_USE_CERT:-1}" == "1" ]] && security find-identity -v -p codesigning 2>/dev/null | grep -q "ScreenFlip Dev"; then
   SIGN_ID="ScreenFlip Dev"
 fi
 echo ">> Signing with identity: ${SIGN_ID}  (bundle id ${BUNDLE_ID})"

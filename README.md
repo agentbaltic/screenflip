@@ -49,11 +49,11 @@ cd screenflip
 ./scripts/authorize-signing.sh        # optional but recommended
 
 # Build the app bundle and launch it
-SF_USE_CERT=1 ./build.sh              # stable signing (recommended)
+./build.sh                            # stable signing is used automatically when available
 open build/ScreenFlip.app
 ```
 
-`./build.sh` without `SF_USE_CERT=1` falls back to ad‑hoc signing — it still works, but macOS forgets the Screen Recording grant on each rebuild.
+If the local **ScreenFlip Dev** signing identity is missing, `./build.sh` falls back to ad‑hoc signing — it still works, but macOS forgets the Screen Recording grant on each rebuild. Use `SF_USE_CERT=0 ./build.sh` only when you explicitly want an ad‑hoc build.
 
 On first launch you'll be asked to enable **ScreenFlip** under **System Settings → Privacy & Security → Screen Recording**, then relaunch.
 

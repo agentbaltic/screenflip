@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let defaultsKey = "flippedDisplayUUIDs"
     private let cursorFlipKey = "flipCursor"
     private var savedArrangement: [CGDirectDisplayID: CGPoint] = [:]
+    private var requestedScreenRecordingThisLaunch = false
 
     func applicationDidFinishLaunching(_ note: Notification) {
         Log.reset()
@@ -39,11 +40,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Permission priming
     private func primeScreenRecordingPermission() {
-        Log.line("CGPreflightScreenCaptureAccess = \(CGPreflightScreenCaptureAccess())")
-        if #available(macOS 13.0, *), !CGPreflightScreenCaptureAccess() {
-            Task {
-                _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                await MainActor.run { self.rebuildMenu() }
+        let granted = CGPreflightScreenCaptureAccess()
+        Log.line("CGPreflightScreenCaptureAccess = \(granted)")
+        guard !granted, !requestedScreenRecordingThisLaunch else { return }
+        requestedScreenRecordingThisLaunch = true
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let allowed = CGRequestScreenCaptureAccess()
+            Log.line("CGRequestScreenCaptureAccess = \(allowed)")
+            DispatchQueue.main.async {
+                self.reconcile()
+                self.rebuildMenu()
             }
         }
     }
@@ -57,6 +64,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !reconciling else { return }     // creating/repositioning the virtual display
         reconciling = true                      // fires didChangeScreenParameters; avoid re-entry
         defer { reconciling = false }
+
+        guard CGPreflightScreenCaptureAccess() else {
+            if !controllers.isEmpty {
+                for (_, ctrl) in controllers { (ctrl as? FlipController)?.stop() }
+                controllers.removeAll()
+            }
+            MirrorInput.shared.setMappings([])
+            Log.line("reconcile deferred: Screen Recording permission is not available")
+            return
+        }
 
         let active = Displays.all()
         let activeByUUID = Dictionary(uniqueKeysWithValues: active.map { ($0.uuid, $0) })
