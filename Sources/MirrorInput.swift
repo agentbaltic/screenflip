@@ -52,15 +52,41 @@ final class MirrorInput {
         for m in mappings {
             let vRect = CGRect(origin: m.vOrigin, size: m.vSize)
             if vRect.contains(c) {
-                let localX = c.x - m.vOrigin.x
-                let localY = c.y - m.vOrigin.y
-                let sx = m.pRect.minX + (m.vSize.width - localX)   // horizontal mirror
-                let sy = m.pRect.minY + localY
-                cursorWindow.moveHotspot(toCG: CGPoint(x: sx, y: sy))
-                lastOnWorkspace = true
+                drawProxy(at: c, mapping: m)
                 return
             }
         }
+        // Edge guard: the physical output P only ever shows V's mirrored picture, so the
+        // cursor has no business there — were it allowed to stay, the OS would draw a
+        // real, unmirrored cursor on top of the flipped content and its motion would
+        // read backwards. If it slips onto P anyway (shared edge after the OS adjusts
+        // the arrangement, an app-initiated warp, a fast flick), pin it back to the
+        // nearest point of the workspace. This touches the cursor ONLY on P, a display
+        // the user cannot meaningfully use; input everywhere else stays native.
+        // Safety: containment uses LIVE bounds looked up by display ID, never the cached
+        // rects — a stale mapping (mid-arrangement-change, dead workspace) must not let
+        // the guard fight the cursor on a display the user actually uses.
+        for m in mappings {
+            guard CGDisplayBounds(m.pDisplayID).contains(c) else { continue }
+            let vRect = CGDisplayBounds(m.vDisplayID)
+            guard !vRect.isEmpty else { continue }      // workspace gone → leave the cursor alone
+            let pinned = CGPoint(x: min(max(c.x, vRect.minX), vRect.maxX - 1),
+                                 y: min(max(c.y, vRect.minY), vRect.maxY - 1))
+            CGWarpMouseCursorPosition(pinned)
+            CGAssociateMouseAndMouseCursorPosition(1)   // cancel post-warp move suppression
+            drawProxy(at: pinned, mapping: m)
+            return
+        }
         if lastOnWorkspace { cursorWindow.hideCursor(); lastOnWorkspace = false }
+    }
+
+    /// Draw the synthetic cursor on P at the horizontal mirror of workspace point `c`.
+    private func drawProxy(at c: CGPoint, mapping m: WorkspaceMapping) {
+        let localX = c.x - m.vOrigin.x
+        let localY = c.y - m.vOrigin.y
+        let sx = m.pRect.minX + (m.vSize.width - localX)   // horizontal mirror
+        let sy = m.pRect.minY + localY
+        cursorWindow.moveHotspot(toCG: CGPoint(x: sx, y: sy))
+        lastOnWorkspace = true
     }
 }

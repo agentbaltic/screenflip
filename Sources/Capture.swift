@@ -148,8 +148,13 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     // MARK: SCStreamDelegate
-    func stream(_ stream: SCStream, didStopWithError error: Error) {
-        let message = "stream stopped: \(error.localizedDescription)"
+    // Takes an *optional* error even though the Swift protocol says non-optional:
+    // replayd sometimes delivers a nil NSError here (e.g. around sleep/wake), and
+    // bridging that nil into `Error` crashes in swift_getErrorValue. The requirement
+    // is @optional in ObjC, so this selector still gets called and conformance holds.
+    @objc(stream:didStopWithError:)
+    private func stream(_ stream: SCStream, didStopWithError error: Error?) {
+        let message = "stream stopped: \(error?.localizedDescription ?? "(no error provided by replayd)")"
         Log.line(message)
         guard clearIfCurrentStream(stream) else {
             releaseSelfRetainIfIdle()

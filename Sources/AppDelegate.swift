@@ -78,9 +78,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let active = Displays.all()
         let activeByUUID = Dictionary(uniqueKeysWithValues: active.map { ($0.uuid, $0) })
 
-        // Stop controllers that are no longer selected or whose physical display vanished.
-        for (uuid, ctrl) in controllers where !selected.contains(uuid) || activeByUUID[uuid] == nil {
-            (ctrl as? FlipController)?.stop()
+        // Stop controllers that are no longer selected, whose physical display vanished,
+        // or whose virtual workspace died (system terminated it / creation failed) — the
+        // last group gets recreated below with a fresh workspace.
+        for (uuid, ctrl) in controllers {
+            let fc = ctrl as? FlipController
+            guard !selected.contains(uuid) || activeByUUID[uuid] == nil
+                    || fc?.workspaceAlive != true else { continue }
+            fc?.stop()
             controllers[uuid] = nil
         }
         // Start controllers for selected, active displays not yet running.
@@ -94,10 +99,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Log.line("reconcile: \(controllers.count) workspace(s) of \(selected.count) selected, \(active.count) active")
 
-        // The portal input router is intrinsic to the virtual workspace: without it the
-        // cursor would land on the headless display and be lost. It only redirects while the
-        // perceived cursor is on a flipped output, and clamps to real displays — other
-        // screens are untouched.
+        // The cursor proxy is intrinsic to the virtual workspace: the headless display has
+        // no visible system cursor, so MirrorInput draws one on the flipped output. It also
+        // guards the output display's edges — the cursor is pinned to the workspace rather
+        // than allowed onto the output panel. Other screens are untouched.
         let maps = controllers.values.compactMap { ($0 as? FlipController)?.mapping }
         MirrorInput.shared.setMappings(maps)
     }
