@@ -10,3 +10,28 @@ build/
 DerivedData/
 *.xcuserstate
 *.swiftpm
+
+# Windows / MSVC build intermediates
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.res
+*.cso
+*.idb
+windows/build/
+windows/driver/**/x64/
+windows/driver/**/Debug/
+windows/driver/**/Release/
+Thumbs.db
+desktop.ini
+
+# The macOS distribution build is intentionally committed (the README links to
+# macos/build/ScreenFlip.zip), so re-include just those artifacts despite the
+# build/ and *.app rules above — without un-ignoring .DS_Store etc.
+!macos/build/
+!macos/build/ScreenFlip.zip
+!macos/build/ScreenFlip.app/
+!macos/build/ScreenFlip.app/**

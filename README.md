@@ -1,75 +1,61 @@
 # ScreenFlip
 
-Turn any Mac monitor into a **horizontally‑mirrored extended display you can actually work on** — with a cursor that still moves the right way and clicks that land where you expect.
+Turn any monitor into a **horizontally‑mirrored display you can actually work on** —
+with a cursor that still moves the right way and clicks that land where you expect.
 
-## Why this exists
+Most "screen flip" tools just capture your screen and redraw it backwards, which
+leaves you fighting a mirror‑image cursor. ScreenFlip solves the part everyone skips:
+it puts your real windows and the real pointer on a **hidden workspace** and shows
+that workspace **flipped, full‑screen** on your chosen monitor, drawing a matching
+cursor at the mirrored spot. Move the mouse and it behaves naturally; click and it
+hits exactly what you see.
 
-macOS can rotate a display (90°/180°), but it has **no built‑in way to mirror one left‑to‑right**. And on Apple Silicon the old low‑level framebuffer flip simply doesn't work anymore, so even most third‑party tools fall back to capturing the screen and re‑drawing it flipped — which leaves you with a backwards, hard‑to‑use cursor.
+Great for **teleprompters / beam‑splitter glass**, **filming yourself** at a screen
+the camera mirrors, and **mirror / practice setups** you still need to operate.
 
-ScreenFlip solves the part everyone skips: the **cursor**. Move your mouse and it behaves naturally on the flipped display; click and it hits exactly what you see. That makes a mirrored screen genuinely usable for things like:
+![ScreenFlip before/after](assets/screenflip-before-after.png)
 
-- **Teleprompters / beam‑splitter glass** — text reads correctly in the reflection.
-- **Filming yourself** at a screen where the camera mirrors the image.
-- **Mirror / practice setups** where you want a flipped view you can still operate.
+## Platforms
 
-## How it works (short version)
+| | Edition | Stack | Status |
+|---|---|---|---|
+| 🍎 | **[macOS](macos)** | Swift · ScreenCaptureKit · private `CGVirtualDisplay` | Proven (built/tested on Apple Silicon, M3) |
+| 🪟 | **[Windows](windows)** | C++ · Direct3D 11 · Windows.Graphics.Capture · IddCx | Architected from the macOS app — see its [caveats](windows/README.md#-read-this-before-expecting-magic) |
 
-When you pick a display to flip, ScreenFlip:
+Both editions share the same **"Model B"** architecture: a headless **virtual
+workspace** hosts your windows and the real cursor; it is captured and re‑drawn
+horizontally flipped on the physical monitor; a passive proxy cursor is painted at
+the mirrored position; and there is **no input interception** anywhere — clicks,
+drags and typing are all native. Display arrangement is saved on launch and restored
+on quit.
 
-1. Creates a **headless virtual display** — this becomes the real workspace your windows live on.
-2. **Captures** that workspace and draws it **horizontally flipped, full‑screen** on your chosen physical monitor.
-3. Lets the cursor live **natively** on the workspace (so movement, clicks, drags and typing all just work) and draws a matching cursor on the flipped monitor at the mirrored spot.
+The big platform difference is the virtual display:
 
-There is **no input interception** of any kind — nothing touches your mouse or keyboard on other screens. Your display arrangement is saved when ScreenFlip starts and restored when it quits.
+- **macOS** uses the private, driver‑free `CGVirtualDisplay`.
+- **Windows** has no driver‑free equivalent, so the full experience uses an **IddCx**
+  virtual‑display driver (an existing signed community one, or the bundled
+  [`windows/driver`](windows/driver)); without one it falls back to a degraded "mirror
+  another display" mode. See the [Windows notes](windows/README.md) and
+  [`windows/SPEC.md`](windows/SPEC.md).
 
-## Requirements
+## Repository layout
 
-- macOS 14 (Sonoma) or later, **Apple Silicon** (developed/tested on M3).
-- Xcode **Command Line Tools** (`xcode-select --install`) — full Xcode is not required.
-- One **Screen Recording** permission grant (prompted on first run). No Accessibility, no special entitlements.
-
-> Note: ScreenFlip uses a private macOS virtual‑display API. It works well today but, like anything built on private APIs, could need updates after a major macOS release.
-
-## Download
-
-Download the latest bundled app here:
-
-**[Download ScreenFlip.app](https://github.com/vbario/screenflip/raw/main/build/ScreenFlip.zip)**
-
-Unzip it, open `ScreenFlip.app`, and grant Screen Recording permission when macOS asks.
-
-## Build & run
-
-```bash
-git clone https://github.com/vbario/screenflip.git
-cd screenflip
-
-# One‑time: create a stable local signing identity so macOS remembers the
-# Screen Recording permission across rebuilds (you'll be asked to authorize it).
-./scripts/authorize-signing.sh        # optional but recommended
-
-# Build the app bundle and launch it
-./build.sh                            # stable signing is used automatically when available
-open build/ScreenFlip.app
+```
+screenflip/
+├── macos/      # macOS edition (Swift) — build.sh, Sources/, prebuilt build/
+├── windows/    # Windows edition (C++) — build.bat, src/, driver/, SPEC.md
+├── assets/     # shared marketing images
+└── README.md   # you are here
 ```
 
-If the local **ScreenFlip Dev** signing identity is missing, `./build.sh` falls back to ad‑hoc signing — it still works, but macOS forgets the Screen Recording grant on each rebuild. Use `SF_USE_CERT=0 ./build.sh` only when you explicitly want an ad‑hoc build.
+## Quick start
 
-On first launch you'll be asked to enable **ScreenFlip** under **System Settings → Privacy & Security → Screen Recording**, then relaunch.
-
-## Using it
-
-ScreenFlip runs as a menu‑bar app (look for the **⇋** icon — no Dock icon, no window):
-
-- **Pick which displays to flip** — toggle any connected display in the menu. Selected displays become flipped workspaces. Your choice is remembered.
-- **Flip cursor to match mirror** — toggles whether the on‑screen cursor is also mirrored (↗) to match the flipped image, or kept normal‑facing (↖). Handy when you're viewing through a physical mirror.
-- **Restart all** / **Quit ScreenFlip** — quitting restores your original display arrangement.
-
-To use a flipped display, just move your mouse onto it and work normally — the windows you drag there appear mirrored, and the cursor stays correct.
+- **macOS** → [`macos/README.md`](macos/README.md) — `cd macos && ./build.sh`
+- **Windows** → [`windows/README.md`](windows/README.md) — `cd windows && build.bat`
 
 ## Help & feedback
 
-Questions, bug reports, or ideas? Email **vladimir@vbar.io** — happy to help.
+Questions, bug reports, or ideas? Email **vladimir@vbar.io**.
 
 ## License
 

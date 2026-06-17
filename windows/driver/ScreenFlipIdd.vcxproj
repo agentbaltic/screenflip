@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ScreenFlip IddCx UMDF driver project. Requires the Windows Driver Kit (WDK)
+     matching your Windows SDK. Build: msbuild ScreenFlipIdd.vcxproj /p:Configuration=Release /p:Platform=x64
+     (from an EWDK prompt or a VS install with the WDK). UNTESTED reference project. -->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8D2CF5F0-3F8E-4F2A-9B1B-0A4F5E2B7C11}</ProjectGuid>
+    <RootNamespace>ScreenFlipIdd</RootNamespace>
+    <TargetVersion>Windows10</TargetVersion>
+    <DriverType>UMDF</DriverType>
+    <UmdfVersionMajor>2</UmdfVersionMajor>
+    <UmdfVersionMinor>31</UmdfVersionMinor>
+    <Configuration>Release</Configuration>
+    <Platform>x64</Platform>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>UMDF</DriverType>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>IddCx.lib;avrt.lib;d3d11.lib;dxgi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Inf>
+      <SpecifyArchitecture>true</SpecifyArchitecture>
+      <Architecture>amd64</Architecture>
+    </Inf>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="Driver.cpp" />
+    <ClInclude Include="Driver.h" />
+    <Inf Include="ScreenFlipIdd.inf" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
