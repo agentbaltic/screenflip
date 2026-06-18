@@ -1,0 +1,31 @@
+# Normalize text files to LF in the repository; auto-detect binary.
+* text=auto
+
+# --- Windows toolchain files: must check out as CRLF ---
+# cmd.exe mishandles goto/labels in LF-only .bat files, so force CRLF.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.rc        text eol=crlf
+*.inf       text eol=crlf
+*.vcxproj   text eol=crlf
+*.manifest  text eol=crlf
+
+# --- Unix scripts: must stay LF ---
+*.sh        text eol=lf
+
+# --- Source kept LF (MSVC/fxc accept LF fine) ---
+*.cpp       text eol=lf
+*.h         text eol=lf
+*.hlsl      text eol=lf
+*.swift     text eol=lf
+
+# --- Binary assets: never normalize ---
+*.ico       binary
+*.png       binary
+*.zip       binary
+*.cer       binary
+*.cat       binary
+
+# The committed, code-signed macOS app bundle must never be touched (any
+# line-ending normalization of Info.plist/CodeResources invalidates the signature).
+macos/build/ScreenFlip.app/** binary
