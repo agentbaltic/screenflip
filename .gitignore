@@ -28,10 +28,8 @@ windows/driver/**/Release/
 Thumbs.db
 desktop.ini
 
-# The macOS distribution build is intentionally committed (the README links to
-# macos/build/ScreenFlip.zip), so re-include just those artifacts despite the
-# build/ and *.app rules above — without un-ignoring .DS_Store etc.
+# The macOS distribution DMG is intentionally committed (the README links to
+# macos/build/ScreenFlip-<version>.dmg), so re-include just the built DMG despite
+# the build/ rule above — without un-ignoring .DS_Store, the loose .app, etc.
 !macos/build/
-!macos/build/ScreenFlip.zip
-!macos/build/ScreenFlip.app/
-!macos/build/ScreenFlip.app/**
+!macos/build/*.dmg

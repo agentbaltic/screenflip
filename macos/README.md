@@ -34,11 +34,11 @@ There is **no input interception** of any kind — nothing touches your mouse or
 
 ## Download
 
-Download the latest bundled app here:
+Download the latest **signed & notarized** build here:
 
-**[Download ScreenFlip.app](https://github.com/vbario/screenflip/raw/main/macos/build/ScreenFlip.zip)**
+**[Download ScreenFlip 0.3 (.dmg)](https://github.com/vbario/screenflip/raw/main/macos/build/ScreenFlip-0.3.dmg)**
 
-Unzip it, open `ScreenFlip.app`, and grant Screen Recording permission when macOS asks.
+Open the DMG, drag **ScreenFlip.app** into **Applications**, launch it, and grant Screen Recording permission when macOS asks. The app is signed with a Developer ID and notarized by Apple, so it opens without Gatekeeper warnings.
 
 ## Build & run
 
