@@ -9,6 +9,11 @@ import CoreGraphics
 /// synthetic cursor on the physical output P at the horizontally-mirrored position — i.e.
 /// exactly where V's flipped capture shows the spot the cursor is really on.
 ///
+/// All geometry is looked up LIVE by display ID on every tick. The mapping only carries
+/// IDs: cached rects go stale the instant the OS adjusts the arrangement (hotplug,
+/// resolution change, overlap resolution), and a stale rect here either fences the
+/// cursor into part of the workspace or draws the proxy far from where clicks land.
+///
 /// Needs NO Accessibility and NO event tap.
 final class MirrorInput {
     static let shared = MirrorInput()
@@ -50,7 +55,8 @@ final class MirrorInput {
     private func tick() {
         guard let c = CGEvent(source: nil)?.location else { return }
         for m in mappings {
-            let vRect = CGRect(origin: m.vOrigin, size: m.vSize)
+            let vRect = CGDisplayBounds(m.vDisplayID)
+            guard !vRect.isEmpty else { continue }      // workspace gone → skip
             if vRect.contains(c) {
                 drawProxy(at: c, mapping: m)
                 return
@@ -63,9 +69,6 @@ final class MirrorInput {
         // the arrangement, an app-initiated warp, a fast flick), pin it back to the
         // nearest point of the workspace. This touches the cursor ONLY on P, a display
         // the user cannot meaningfully use; input everywhere else stays native.
-        // Safety: containment uses LIVE bounds looked up by display ID, never the cached
-        // rects — a stale mapping (mid-arrangement-change, dead workspace) must not let
-        // the guard fight the cursor on a display the user actually uses.
         for m in mappings {
             guard CGDisplayBounds(m.pDisplayID).contains(c) else { continue }
             let vRect = CGDisplayBounds(m.vDisplayID)
@@ -81,11 +84,17 @@ final class MirrorInput {
     }
 
     /// Draw the synthetic cursor on P at the horizontal mirror of workspace point `c`.
+    /// P and V normally share a size, but live bounds can disagree transiently (mode
+    /// change before the workspace rebuild lands) — scale so the proxy still sits on
+    /// the pixel the flipped capture shows for `c`.
     private func drawProxy(at c: CGPoint, mapping m: WorkspaceMapping) {
-        let localX = c.x - m.vOrigin.x
-        let localY = c.y - m.vOrigin.y
-        let sx = m.pRect.minX + (m.vSize.width - localX)   // horizontal mirror
-        let sy = m.pRect.minY + localY
+        let vRect = CGDisplayBounds(m.vDisplayID)
+        let pRect = CGDisplayBounds(m.pDisplayID)
+        guard !vRect.isEmpty, !pRect.isEmpty else { return }
+        let localX = c.x - vRect.minX
+        let localY = c.y - vRect.minY
+        let sx = pRect.minX + (vRect.width - 1 - localX) * (pRect.width / vRect.width)
+        let sy = pRect.minY + localY * (pRect.height / vRect.height)
         cursorWindow.moveHotspot(toCG: CGPoint(x: sx, y: sy))
         lastOnWorkspace = true
     }

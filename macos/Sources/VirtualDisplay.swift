@@ -50,16 +50,6 @@ final class VirtualDisplay {
         Log.line("VirtualDisplay created id=\(displayID) \(width)x\(height)")
     }
 
-    /// Move the virtual display to an isolated origin so the OS cursor can never wander
-    /// onto it through normal arrangement edges — we drive it explicitly instead.
-    func reposition(toCG origin: CGPoint) {
-        var config: CGDisplayConfigRef?
-        guard CGBeginDisplayConfiguration(&config) == .success else { return }
-        CGConfigureDisplayOrigin(config, displayID, Int32(origin.x), Int32(origin.y))
-        CGCompleteDisplayConfiguration(config, .forSession)
-        Log.line("VirtualDisplay \(displayID) origin -> \(origin); bounds=\(CGDisplayBounds(displayID))")
-    }
-
     func destroy() {
         display = nil
         descriptor = nil

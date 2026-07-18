@@ -7,7 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var selected: Set<String> = []            // uuids the user wants flipped
     private let defaultsKey = "flippedDisplayUUIDs"
     private let cursorFlipKey = "flipCursor"
-    private var savedArrangement: [CGDirectDisplayID: CGPoint] = [:]
+    private var savedArrangement: [String: CGPoint] = [:]    // display uuid -> origin
+    private var pendingScreensChange: DispatchWorkItem?
     private var requestedScreenRecordingThisLaunch = false
 
     func applicationDidFinishLaunching(_ note: Notification) {
@@ -21,7 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         selected = Set(UserDefaults.standard.stringArray(forKey: defaultsKey) ?? [])
         Log.line("restored selection: \(selected)")
-        for d in Displays.all() { Log.line("display \(d.id): \"\(d.label)\" uuid=\(d.uuid)") }
+        for d in Displays.all() {
+            Log.line("display \(d.id): \"\(d.label)\" uuid=\(d.uuid)\(d.isWorkspace ? " [workspace]" : "")")
+        }
 
         setupStatusItem()
 
@@ -75,16 +78,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let active = Displays.all()
+        let active = Displays.physical()
         let activeByUUID = Dictionary(uniqueKeysWithValues: active.map { ($0.uuid, $0) })
 
         // Stop controllers that are no longer selected, whose physical display vanished,
-        // or whose virtual workspace died (system terminated it / creation failed) — the
-        // last group gets recreated below with a fresh workspace.
+        // whose virtual workspace died (system terminated it / creation failed), or whose
+        // output changed size (reconnect at a different resolution) — the last two groups
+        // get recreated below with a fresh workspace.
         for (uuid, ctrl) in controllers {
             let fc = ctrl as? FlipController
-            guard !selected.contains(uuid) || activeByUUID[uuid] == nil
-                    || fc?.workspaceAlive != true else { continue }
+            let keep = selected.contains(uuid) && activeByUUID[uuid] != nil
+                    && fc?.workspaceAlive == true && fc?.needsRebuild != true
+            guard !keep else { continue }
             fc?.stop()
             controllers[uuid] = nil
         }
@@ -118,11 +123,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func screensChanged() {
         guard !reconciling else { return }
         Log.line("display configuration changed")
+        // Overlays track their output immediately so a rearrangement never leaves a
+        // flipped picture parked over the wrong display…
         if #available(macOS 13.0, *) {
             for ctrl in controllers.values { (ctrl as? FlipController)?.repositionOverlay() }
         }
-        reconcile()
-        rebuildMenu()
+        // …but reconcile only after the burst settles: one hotplug fires several of
+        // these notifications, and rebuilding workspaces against half-settled bounds
+        // is how duplicate workspaces and wrong-display flips happened mid-session.
+        pendingScreensChange?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            if #available(macOS 13.0, *) {
+                for ctrl in self.controllers.values { (ctrl as? FlipController)?.repositionOverlay() }
+            }
+            self.reconcile()
+            self.rebuildMenu()
+        }
+        pendingScreensChange = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
     }
 
     // MARK: Menu
@@ -137,7 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         header.isEnabled = false
         menu.addItem(header)
 
-        for d in Displays.all() {
+        for d in Displays.physical() {
             let item = NSMenuItem(title: d.label, action: #selector(toggleDisplay(_:)), keyEquivalent: "")
             item.representedObject = d.uuid
             item.state = selected.contains(d.uuid) ? .on : .off
