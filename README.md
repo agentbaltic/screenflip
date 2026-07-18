@@ -1,6 +1,10 @@
 # ScreenFlip
 
-Turn any monitor into a **horizontally‑mirrored display you can actually work on** —
+> This maintenance fork preserves the original project history and is hardening the
+> macOS teleprompter workflow for a supported release. See
+> [`PROJECT_PLAN.md`](PROJECT_PLAN.md) for the current architecture and milestones.
+
+Turn a non-main external monitor into a **horizontally‑mirrored display you can actually work on** —
 with a cursor that still moves the right way and clicks that land where you expect.
 
 Most "screen flip" tools just capture your screen and redraw it backwards, which
@@ -55,7 +59,8 @@ screenflip/
 
 ## Help & feedback
 
-Questions, bug reports, or ideas? Email **vladimir@vbar.io**.
+Use this fork's [GitHub issues](https://github.com/agentbaltic/screenflip/issues) for
+bug reports, hardware results, and feature requests.
 
 ## License
 

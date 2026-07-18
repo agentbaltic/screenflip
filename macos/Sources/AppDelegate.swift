@@ -4,7 +4,9 @@ import ScreenCaptureKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var controllers: [String: Any] = [:]      // uuid -> FlipController
-    private var selected: Set<String> = []            // uuids the user wants flipped
+    // The v0.4 macOS architecture supports one flipped output at a time. A set is kept
+    // for backward compatibility with the v0.3 UserDefaults format.
+    private var selected: Set<String> = []
     private let defaultsKey = "flippedDisplayUUIDs"
     private let cursorFlipKey = "flipCursor"
     private var savedArrangement: [CGDirectDisplayID: CGPoint] = [:]
@@ -21,13 +23,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         selected = Set(UserDefaults.standard.stringArray(forKey: defaultsKey) ?? [])
         Log.line("restored selection: \(selected)")
-        for d in Displays.all() { Log.line("display \(d.id): \"\(d.label)\" uuid=\(d.uuid)") }
+        for d in Displays.all() {
+            Log.line("display \(d.id): \"\(d.label)\" uuid=\(d.uuid) eligible=\(!d.isMain)")
+        }
 
         setupStatusItem()
-
-        // Warm up Screen Recording permission (the first SCShareableContent call triggers
-        // the prompt). We do this even with nothing selected so the toggle is instant later.
-        primeScreenRecordingPermission()
 
         // React to display hotplug / rearrangement.
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
@@ -75,8 +75,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let active = Displays.all()
+        let active = Displays.eligibleOutputs()
         let activeByUUID = Dictionary(uniqueKeysWithValues: active.map { ($0.uuid, $0) })
+
+        // v0.3 allowed multiple selections even though every controller attempted to use
+        // the same arrangement slot. Collapse an old preference deterministically.
+        let activeSelections = active.filter { selected.contains($0.uuid) }
+        if activeSelections.count > 1, let keep = activeSelections.first {
+            selected = [keep.uuid]
+            persistSelection()
+            Log.line("migrated multiple selections; keeping \(keep.uuid)")
+        }
 
         // Stop controllers that are no longer selected, whose physical display vanished,
         // or whose virtual workspace died (system terminated it / creation failed) — the
@@ -109,10 +118,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleDisplay(_ sender: NSMenuItem) {
         guard let uuid = sender.representedObject as? String else { return }
-        if selected.contains(uuid) { selected.remove(uuid) } else { selected.insert(uuid) }
-        UserDefaults.standard.set(Array(selected), forKey: defaultsKey)
+        if selected.contains(uuid) {
+            selected.removeAll()
+        } else {
+            selected = [uuid]
+        }
+        persistSelection()
+        if !selected.isEmpty {
+            // Ask in direct response to the user's choice instead of surprising them with
+            // a privacy prompt merely because the menu-bar app launched.
+            primeScreenRecordingPermission()
+        }
         reconcile()
         rebuildMenu()
+    }
+
+    private func persistSelection() {
+        UserDefaults.standard.set(Array(selected), forKey: defaultsKey)
     }
 
     @objc private func screensChanged() {
@@ -133,20 +155,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func rebuildMenu() {
         let menu = NSMenu()
-        let header = NSMenuItem(title: "Flip which displays:", action: nil, keyEquivalent: "")
+        let header = NSMenuItem(title: "Flip one external display:", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
 
         for d in Displays.all() {
-            let item = NSMenuItem(title: d.label, action: #selector(toggleDisplay(_:)), keyEquivalent: "")
-            item.representedObject = d.uuid
-            item.state = selected.contains(d.uuid) ? .on : .off
-            item.target = self
+            let suffix = d.isMain ? " (not available)" : ""
+            let item = NSMenuItem(title: d.label + suffix,
+                                  action: d.isMain ? nil : #selector(toggleDisplay(_:)),
+                                  keyEquivalent: "")
+            if !d.isMain {
+                item.representedObject = d.uuid
+                item.state = selected.contains(d.uuid) ? .on : .off
+                item.target = self
+            } else {
+                item.isEnabled = false
+            }
             menu.addItem(item)
         }
 
+        if Displays.eligibleOutputs().isEmpty {
+            let empty = NSMenuItem(title: "Connect a second display to begin", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
+        }
+
         menu.addItem(.separator())
-        let note = NSMenuItem(title: "Selected displays become flipped workspaces", action: nil, keyEquivalent: "")
+        let noteTitle = controllers.isEmpty ? "Inactive" : "Active — move windows onto the hidden workspace"
+        let note = NSMenuItem(title: noteTitle, action: nil, keyEquivalent: "")
         note.isEnabled = false
         menu.addItem(note)
 

@@ -82,11 +82,11 @@ final class MirrorInput {
 
     /// Draw the synthetic cursor on P at the horizontal mirror of workspace point `c`.
     private func drawProxy(at c: CGPoint, mapping m: WorkspaceMapping) {
-        let localX = c.x - m.vOrigin.x
-        let localY = c.y - m.vOrigin.y
-        let sx = m.pRect.minX + (m.vSize.width - localX)   // horizontal mirror
-        let sy = m.pRect.minY + localY
-        cursorWindow.moveHotspot(toCG: CGPoint(x: sx, y: sy))
+        let workspace = CGRect(origin: m.vOrigin, size: m.vSize)
+        guard let proxy = FlipGeometry.horizontalMirror(point: c, from: workspace, to: m.pRect) else {
+            return
+        }
+        cursorWindow.moveHotspot(toCG: proxy)
         lastOnWorkspace = true
     }
 }

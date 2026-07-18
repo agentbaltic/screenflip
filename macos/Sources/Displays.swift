@@ -4,13 +4,24 @@ import CoreGraphics
 /// Helpers for enumerating displays and mapping between CoreGraphics display IDs
 /// and AppKit NSScreens.
 enum Displays {
+    // Keep these in sync with VirtualDisplay. They let us distinguish ScreenFlip's
+    // private workspace from real output panels when CoreGraphics enumerates both.
+    static let workspaceVendorID: UInt32 = 0x5346 // "SF"
+    static let workspaceProductID: UInt32 = 0x5350 // "SP"
+
     struct Info {
         let id: CGDirectDisplayID
         let uuid: String            // stable across reboots (numeric id is not)
         let bounds: CGRect          // global CG coords (top-left origin)
         let isMain: Bool
         let isBuiltin: Bool
+        let vendorID: UInt32
+        let productID: UInt32
         let screen: NSScreen?
+
+        var isScreenFlipWorkspace: Bool {
+            vendorID == Displays.workspaceVendorID && productID == Displays.workspaceProductID
+        }
 
         /// Human-friendly label for the menu, e.g. "LG FULL HD (1920×1080)".
         var label: String {
@@ -20,7 +31,19 @@ enum Displays {
         }
     }
 
+    /// All physical displays. ScreenFlip's private virtual workspaces are deliberately
+    /// hidden so they can never appear as output choices or be selected recursively.
     static func all() -> [Info] {
+        activeIncludingWorkspaces().filter { !$0.isScreenFlipWorkspace }
+    }
+
+    /// Physical displays that are safe to use as flipped outputs. The main display is
+    /// the anchor for the hidden workspace and therefore cannot itself be the output.
+    static func eligibleOutputs() -> [Info] {
+        all().filter { !$0.isMain }
+    }
+
+    private static func activeIncludingWorkspaces() -> [Info] {
         var count: UInt32 = 0
         CGGetActiveDisplayList(0, nil, &count)
         var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
@@ -31,6 +54,8 @@ enum Displays {
                  bounds: CGDisplayBounds(id),
                  isMain: CGDisplayIsMain(id) != 0,
                  isBuiltin: CGDisplayIsBuiltin(id) != 0,
+                 vendorID: CGDisplayVendorNumber(id),
+                 productID: CGDisplayModelNumber(id),
                  screen: screen(for: id))
         }
     }
