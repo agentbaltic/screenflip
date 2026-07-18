@@ -29,6 +29,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupStatusItem()
 
+        // A remembered output should resume automatically after relaunch. If Screen
+        // Recording was revoked or has not yet been granted, request it for this exact
+        // signed build before reconcile attempts to create the workspace.
+        if !selected.isEmpty {
+            primeScreenRecordingPermission()
+        }
+
         // React to display hotplug / rearrangement.
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
                                                name: NSApplication.didChangeScreenParametersNotification, object: nil)
