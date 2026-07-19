@@ -49,6 +49,11 @@ enum Displays {
     /// display, and one in a snapshot pins a dead ID into the restore map.
     static func physical() -> [Info] { all().filter { !$0.isWorkspace } }
 
+    /// Physical displays that are safe to use as flipped outputs. The main display
+    /// anchors the hidden workspace arrangement and hosts the primary menu bar, so it
+    /// cannot itself be the output.
+    static func eligibleOutputs() -> [Info] { physical().filter { !$0.isMain } }
+
     /// Stable per-display identifier (survives reboot / reconnection).
     static func uuidString(for id: CGDirectDisplayID) -> String {
         guard let cf = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else {

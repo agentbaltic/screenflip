@@ -84,18 +84,14 @@ final class MirrorInput {
     }
 
     /// Draw the synthetic cursor on P at the horizontal mirror of workspace point `c`.
-    /// P and V normally share a size, but live bounds can disagree transiently (mode
-    /// change before the workspace rebuild lands) — scale so the proxy still sits on
-    /// the pixel the flipped capture shows for `c`.
+    /// Bounds are looked up live; FlipGeometry clamps and scales, so the proxy stays on
+    /// the pixel the flipped capture shows for `c` even if P and V transiently disagree
+    /// in size (mode change before the workspace rebuild lands).
     private func drawProxy(at c: CGPoint, mapping m: WorkspaceMapping) {
         let vRect = CGDisplayBounds(m.vDisplayID)
         let pRect = CGDisplayBounds(m.pDisplayID)
-        guard !vRect.isEmpty, !pRect.isEmpty else { return }
-        let localX = c.x - vRect.minX
-        let localY = c.y - vRect.minY
-        let sx = pRect.minX + (vRect.width - 1 - localX) * (pRect.width / vRect.width)
-        let sy = pRect.minY + localY * (pRect.height / vRect.height)
-        cursorWindow.moveHotspot(toCG: CGPoint(x: sx, y: sy))
+        guard let proxy = FlipGeometry.horizontalMirror(point: c, from: vRect, to: pRect) else { return }
+        cursorWindow.moveHotspot(toCG: proxy)
         lastOnWorkspace = true
     }
 }

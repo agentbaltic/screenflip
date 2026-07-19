@@ -22,8 +22,8 @@ final class VirtualDisplay {
         // Pick a physical size that yields ~109 dpi (typical desktop monitor).
         desc.sizeInMillimeters = CGSize(width: Double(width) / 109.0 * 25.4,
                                         height: Double(height) / 109.0 * 25.4)
-        desc.productID = 0x5350
-        desc.vendorID = 0x5346
+        desc.productID = Displays.workspaceProductID
+        desc.vendorID = Displays.workspaceVendorID
         desc.serialNum = serial
         desc.queue = DispatchQueue(label: "io.vbar.screenflip.vd.\(serial)")
         desc.terminationHandler = { [weak self] in
