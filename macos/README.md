@@ -77,6 +77,10 @@ and `./build.sh` for an application build. See
 [`../PROJECT_PLAN.md`](../PROJECT_PLAN.md) for architecture, safety constraints,
 remaining hardware validation, and release work.
 
+For display lifecycle bugs, run `./diagnose.sh` before rebooting or restarting
+WindowServer. It prints a read-only snapshot of ScreenFlip processes, physical and
+virtual displays, saved preferences, and the recent application log.
+
 ## Help & feedback
 
 Use this fork's [GitHub issues](https://github.com/agentbaltic/screenflip/issues) for

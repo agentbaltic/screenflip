@@ -10,6 +10,8 @@ BUNDLE_ID="io.vbar.screenflip"
 APP_DIR="build/${APP}.app"
 DEPLOY_TARGET="13.0"
 SDK="$(xcrun --show-sdk-path)"
+SF_MODULE_CACHE="${TMPDIR:-/tmp}/screenflip-swift-module-cache"
+mkdir -p "$SF_MODULE_CACHE"
 
 FRAMEWORKS=(AppKit Metal MetalKit CoreGraphics CoreVideo QuartzCore Carbon IOKit ScreenCaptureKit CoreMedia)
 FW_FLAGS=()
@@ -35,6 +37,7 @@ mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
 swiftc \
   -sdk "$SDK" \
+  -module-cache-path "$SF_MODULE_CACHE" \
   -target "arm64-apple-macos${DEPLOY_TARGET}" \
   -O \
   "${FW_FLAGS[@]}" \
